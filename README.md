@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-默认通过 Vite 代理将 `/api` 转发到后端（见 `vite.config.ts` 中的 `server.proxy` 配置）。
+默认通过 Vite 代理将 `/api` 转发到本地后端 `http://127.0.0.1:8080`（见 `vite.config.ts`）。生产环境由 `netlify.toml` 将 `/api` 反向代理到云服务器。
 
 ## 构建
 
