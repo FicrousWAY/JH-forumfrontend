@@ -2,22 +2,13 @@
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { agentApi } from '@/api'
-import type { PendingAction } from '@/types'
-import { useAuthStore } from '@/stores/auth'
+import { useAgentStore } from '@/stores/agent'
 
-const auth = useAuthStore()
-const sessionId = ref(`sess_${auth.user?.username || 'guest'}_${Date.now().toString(36)}`)
+const agentStore = useAgentStore()
 const input = ref('')
 const loading = ref(false)
-const pending = ref<PendingAction | null>(null)
-const messages = ref<{ role: 'user' | 'assistant'; content: string }[]>([
-  {
-    role: 'assistant',
-    content: '你好，我是论坛 Agent。可以帮你查帖子、看评论，或起草帖子（需二次确认后发布）。',
-  },
-])
 
-const canConfirm = computed(() => !!pending.value)
+const canConfirm = computed(() => !!agentStore.pending)
 
 async function send(confirmDraftId?: string) {
   const text = input.value.trim() || (confirmDraftId ? '确认发布草稿' : '')
@@ -26,17 +17,17 @@ async function send(confirmDraftId?: string) {
     return
   }
   if (!confirmDraftId) {
-    messages.value.push({ role: 'user', content: text })
+    agentStore.pushMessage({ role: 'user', content: text })
   }
   loading.value = true
   try {
     const { data } = await agentApi.chat({
-      session_id: sessionId.value,
+      session_id: agentStore.sessionId,
       message: text || '确认',
       confirm_draft_id: confirmDraftId,
     })
-    messages.value.push({ role: 'assistant', content: data.data.reply })
-    pending.value = data.data.pending_action
+    agentStore.pushMessage({ role: 'assistant', content: data.data.reply })
+    agentStore.pending = data.data.pending_action
     input.value = ''
   } finally {
     loading.value = false
@@ -44,51 +35,59 @@ async function send(confirmDraftId?: string) {
 }
 
 async function confirmDraft() {
-  if (!pending.value) return
+  if (!agentStore.pending) return
   try {
     await ElMessageBox.confirm(
-      `确认发布以下帖子吗？\n\n${pending.value.content}`,
+      `确认发布以下帖子吗？\n\n${agentStore.pending.content}`,
       '二次确认',
       { type: 'warning' },
     )
-    const draftId = pending.value.draft_id
+    const draftId = agentStore.pending.draft_id
     await send(draftId)
   } catch {
     ElMessage.info('已取消确认')
   }
 }
+
+async function clearHistory() {
+  try {
+    await ElMessageBox.confirm('确认清空当前对话记录吗？', '提示', { type: 'warning' })
+    agentStore.resetSession()
+    ElMessage.success('已清空')
+  } catch {
+    // cancelled
+  }
+}
 </script>
 
 <template>
-  <div class="panel" style="display: flex; flex-direction: column; min-height: 70vh">
+  <div class="panel agent-panel">
     <div class="row" style="justify-content: space-between">
       <div>
-        <h2 style="margin: 0">Agent 多轮对话</h2>
-        <p class="muted" style="margin: 6px 0 0">session: {{ sessionId }}</p>
+        <h2 style="margin: 0; font-size: 18px">Agent 多轮对话</h2>
+        <p class="muted" style="margin: 6px 0 0; font-size: 12px">session: {{ agentStore.sessionId }}</p>
       </div>
-      <el-button v-if="canConfirm" type="warning" @click="confirmDraft">确认发布草稿</el-button>
+      <div class="row">
+        <el-button size="small" @click="clearHistory">清空对话</el-button>
+        <el-button v-if="canConfirm" type="warning" size="small" @click="confirmDraft">确认发布草稿</el-button>
+      </div>
     </div>
 
-    <div style="flex: 1; overflow: auto; margin: 16px 0; display: flex; flex-direction: column; gap: 10px">
+    <div class="agent-messages">
       <div
-        v-for="(m, idx) in messages"
+        v-for="(m, idx) in agentStore.messages"
         :key="idx"
-        :style="{
-          alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-          background: m.role === 'user' ? 'var(--accent-soft)' : '#f8fafc',
-          border: '1px solid var(--border)',
-          borderRadius: '14px',
-          padding: '10px 12px',
-          maxWidth: '85%',
-          whiteSpace: 'pre-wrap',
-        }"
+        class="agent-bubble"
+        :class="m.role === 'user' ? 'is-user' : 'is-bot'"
       >
         {{ m.content }}
       </div>
-      <div v-if="pending" class="panel" style="background: #fff7ed; box-shadow: none">
+      <div v-if="agentStore.pending" class="pending-box">
         <strong>待确认草稿</strong>
-        <p>{{ pending.content }}</p>
-        <div class="muted">draft_id: {{ pending.draft_id }} · 过期：{{ pending.expires_at }}</div>
+        <p>{{ agentStore.pending.content }}</p>
+        <div class="muted" style="font-size: 12px">
+          draft_id: {{ agentStore.pending.draft_id }} · 过期：{{ agentStore.pending.expires_at }}
+        </div>
       </div>
     </div>
 
@@ -108,3 +107,46 @@ async function confirmDraft() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.agent-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 70vh;
+}
+
+.agent-messages {
+  flex: 1;
+  overflow: auto;
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-bubble {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  max-width: 85%;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.agent-bubble.is-user {
+  align-self: flex-end;
+  background: var(--accent-soft);
+}
+
+.agent-bubble.is-bot {
+  align-self: flex-start;
+  background: #f8f8f8;
+}
+
+.pending-box {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 12px;
+  border-radius: 8px;
+}
+</style>

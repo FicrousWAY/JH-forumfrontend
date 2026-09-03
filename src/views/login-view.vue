@@ -4,8 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { usePostsStore } from '@/stores/posts'
 
 const auth = useAuthStore()
+const postsStore = usePostsStore()
 const router = useRouter()
 const route = useRoute()
 const mode = ref<'login' | 'register'>('login')
@@ -32,6 +34,8 @@ async function submitLogin() {
   try {
     const { data } = await authApi.login(loginForm)
     auth.setAuth(data.data.access_token, data.data.user)
+    postsStore.invalidate()
+    void postsStore.fetchList({ force: true })
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/'
     router.replace(redirect)
@@ -64,8 +68,8 @@ async function submitRegister() {
 
 <template>
   <div class="auth-page">
-    <div class="panel auth-card">
-      <h1 style="margin-top: 0; color: var(--accent)">精弘论坛</h1>
+    <div class="auth-card">
+      <h1 class="auth-title">精弘论坛</h1>
       <p class="muted">学生端 / 管理端统一入口</p>
 
       <el-tabs v-model="mode">
@@ -109,3 +113,11 @@ async function submitRegister() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.auth-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+}
+</style>

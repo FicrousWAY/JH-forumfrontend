@@ -3,15 +3,30 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import AppTabBar from '@/components/app-tab-bar.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const sidebarWidth = ref(260)
+const sidebarWidth = ref(220)
 const dragging = ref(false)
 
 const collapsed = computed(() => sidebarWidth.value < 120)
+
+const pageTitle = computed(() => {
+  const map: Record<string, string> = {
+    home: '发现',
+    compose: '发布帖子',
+    'post-detail': '帖子详情',
+    agent: 'Agent 助手',
+    admin: '管理端',
+    sections: '板块',
+    messages: '消息',
+    me: '我的',
+  }
+  return map[route.name as string] || '精弘论坛'
+})
 
 function onMouseMove(e: MouseEvent) {
   if (!dragging.value) return
@@ -54,7 +69,7 @@ onBeforeUnmount(() => {
       <nav class="nav-list">
         <RouterLink class="nav-item" :class="{ active: route.name === 'home' }" :to="{ name: 'home' }">
           <el-icon><House /></el-icon>
-          <span v-if="!collapsed">帖子广场</span>
+          <span v-if="!collapsed">发现</span>
         </RouterLink>
         <RouterLink class="nav-item" :class="{ active: route.name === 'compose' }" :to="{ name: 'compose' }">
           <el-icon><EditPen /></el-icon>
@@ -63,6 +78,18 @@ onBeforeUnmount(() => {
         <RouterLink class="nav-item" :class="{ active: route.name === 'agent' }" :to="{ name: 'agent' }">
           <el-icon><ChatDotRound /></el-icon>
           <span v-if="!collapsed">Agent 助手</span>
+        </RouterLink>
+        <RouterLink class="nav-item" :class="{ active: route.name === 'sections' }" :to="{ name: 'sections' }">
+          <el-icon><Grid /></el-icon>
+          <span v-if="!collapsed">板块</span>
+        </RouterLink>
+        <RouterLink class="nav-item" :class="{ active: route.name === 'messages' }" :to="{ name: 'messages' }">
+          <el-icon><Bell /></el-icon>
+          <span v-if="!collapsed">消息</span>
+        </RouterLink>
+        <RouterLink class="nav-item" :class="{ active: route.name === 'me' }" :to="{ name: 'me' }">
+          <el-icon><User /></el-icon>
+          <span v-if="!collapsed">我的</span>
         </RouterLink>
         <RouterLink
           v-if="auth.isAdmin"
@@ -83,12 +110,38 @@ onBeforeUnmount(() => {
     <section class="main-area">
       <div class="topbar">
         <div>
-          <strong>{{ auth.user?.name || '未登录' }}</strong>
-          <span class="muted"> · {{ auth.user?.username }}</span>
+          <strong>{{ pageTitle }}</strong>
+          <span class="muted desktop-only"> · {{ auth.user?.name || '未登录' }}</span>
         </div>
-        <el-button type="danger" plain @click="logout">退出</el-button>
+        <div class="row">
+          <el-button class="mobile-only" size="small" type="primary" @click="router.push({ name: 'compose' })">
+            发布
+          </el-button>
+          <el-button type="danger" plain size="small" @click="logout">退出</el-button>
+        </div>
       </div>
-      <RouterView />
+      <div class="page-content">
+        <RouterView />
+      </div>
     </section>
+
+    <AppTabBar />
   </div>
 </template>
+
+<style scoped>
+.desktop-only {
+  display: inline;
+}
+.mobile-only {
+  display: none;
+}
+@media (max-width: 860px) {
+  .desktop-only {
+    display: none;
+  }
+  .mobile-only {
+    display: inline-flex;
+  }
+}
+</style>

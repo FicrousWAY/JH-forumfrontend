@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { postApi } from '@/api'
+import { usePostsStore } from '@/stores/posts'
 
 const router = useRouter()
+const postsStore = usePostsStore()
 const content = ref('')
 const loading = ref(false)
 
@@ -21,6 +23,7 @@ async function submit() {
   loading.value = true
   try {
     const { data } = await postApi.create(text)
+    postsStore.invalidate()
     ElMessage.success('发布成功')
     router.push({ name: 'post-detail', params: { id: data.data.id } })
   } finally {
@@ -31,8 +34,8 @@ async function submit() {
 
 <template>
   <div class="panel">
-    <h2 style="margin-top: 0">发布帖子</h2>
-    <p class="muted">作者信息来自登录态，无需也不允许手动传 user_id。</p>
+    <h2 style="margin-top: 0; font-size: 18px">发布帖子</h2>
+    <p class="muted" style="font-size: 13px">作者信息来自登录态，无需也不允许手动传 user_id。</p>
     <el-input
       v-model="content"
       type="textarea"

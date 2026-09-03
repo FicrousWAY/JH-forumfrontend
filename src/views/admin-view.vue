@@ -39,8 +39,8 @@ onMounted(load)
 
 <template>
   <div class="panel">
-    <h2 style="margin-top: 0">管理端 · 帖子治理</h2>
-    <p class="muted">仅管理员可删除任意帖子。学生账号访问会被路由拦截。</p>
+    <h2 style="margin-top: 0; font-size: 18px">管理端 · 帖子治理</h2>
+    <p class="muted" style="font-size: 13px">仅管理员可删除任意帖子。学生账号访问会被路由拦截。</p>
 
     <el-table :data="posts" v-loading="loading" style="width: 100%">
       <el-table-column prop="id" label="ID" width="90" />

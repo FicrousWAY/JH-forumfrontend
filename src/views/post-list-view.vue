@@ -1,108 +1,159 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { postApi } from '@/api'
 import type { PostItem } from '@/types'
-import { useAuthStore } from '@/stores/auth'
+import { usePostsStore } from '@/stores/posts'
+import PostItemCard from '@/components/post-item-card.vue'
 
 const router = useRouter()
-const auth = useAuthStore()
-const loading = ref(false)
-const posts = ref<PostItem[]>([])
-const likedMap = ref<Record<number, boolean>>({})
-const query = reactive({
-  page: 1,
-  page_size: 20,
-  sort: 'latest',
-  total: 0,
-})
+const postsStore = usePostsStore()
+const channel = ref<'square' | 'college' | 'garden'>('square')
 
-async function load() {
-  loading.value = true
-  try {
-    const { data } = await postApi.list({
-      page: query.page,
-      page_size: query.page_size,
-      sort: query.sort,
-    })
-    posts.value = data.data.items
-    query.total = data.data.meta.total
-    const ids = posts.value.map((p) => p.id)
-    if (ids.length) {
-      const statusResp = await postApi.likeStatus(ids)
-      const map: Record<number, boolean> = {}
-      statusResp.data.data.status.forEach((s) => {
-        map[s.post_id] = s.liked
-      })
-      likedMap.value = map
-    } else {
-      likedMap.value = {}
-    }
-  } finally {
-    loading.value = false
-  }
+const banners = [
+  { title: '精弘论坛', subtitle: '校园交流广场', color: '#da8eae' },
+  { title: '热门话题', subtitle: '看看大家都在聊什么', color: '#81b2e9' },
+  { title: '欢迎发帖', subtitle: '分享你的校园生活', color: '#3cc51f' },
+]
+
+async function load(force = false) {
+  await postsStore.fetchList({ force })
 }
 
 async function toggleLike(post: PostItem) {
   try {
     const { data } = await postApi.like(post.id)
-    likedMap.value[post.id] = data.data.is_liked
-    post.like_count += data.data.is_liked ? 1 : -1
-    if (post.like_count < 0) post.like_count = 0
+    postsStore.updateLike(post.id, data.data.is_liked)
   } catch {
     ElMessage.warning('点赞操作失败，请稍后重试')
   }
 }
 
-onMounted(load)
+function openPost(post: PostItem) {
+  router.push({ name: 'post-detail', params: { id: post.id } })
+}
+
+onMounted(() => load())
 </script>
 
 <template>
-  <div class="panel">
-    <div class="row" style="justify-content: space-between; margin-bottom: 12px">
-      <div>
-        <h2 style="margin: 0">帖子广场</h2>
-        <p class="muted" style="margin: 6px 0 0">支持最新 / 热门排序</p>
-      </div>
-      <el-radio-group v-model="query.sort" @change="() => { query.page = 1; load() }">
-        <el-radio-button label="latest">最新</el-radio-button>
-        <el-radio-button label="hot">热门</el-radio-button>
-      </el-radio-group>
+  <div class="explore">
+    <div class="segment-tabs">
+      <span
+        class="segment-tab"
+        :class="{ active: channel === 'square' }"
+        @click="channel = 'square'"
+      >广场</span>
+      <span
+        class="segment-tab"
+        :class="{ active: channel === 'college' }"
+        @click="channel = 'college'"
+      >学院</span>
+      <span
+        class="segment-tab"
+        :class="{ active: channel === 'garden' }"
+        @click="channel = 'garden'"
+      >后院</span>
     </div>
 
-    <el-skeleton :loading="loading" animated :rows="6">
-      <div v-if="!posts.length" class="muted">暂无帖子，去发布第一条吧。</div>
-      <div v-for="post in posts" :key="post.id" class="post-item">
-        <div class="row" style="justify-content: space-between">
-          <strong>{{ post.author.name }}</strong>
-          <span class="muted">{{ new Date(post.created_at).toLocaleString() }}</span>
-        </div>
-        <p style="white-space: pre-wrap; cursor: pointer" @click="router.push({ name: 'post-detail', params: { id: post.id } })">
-          {{ post.content }}
-        </p>
-        <div class="row">
-          <el-button size="small" :type="likedMap[post.id] ? 'primary' : 'default'" @click="toggleLike(post)">
-            {{ likedMap[post.id] ? '已赞' : '点赞' }} {{ post.like_count }}
-          </el-button>
-          <el-button size="small" @click="router.push({ name: 'post-detail', params: { id: post.id } })">
-            评论 {{ post.comment_count }}
-          </el-button>
-          <el-tag size="small" type="info">{{ post.author.role }}</el-tag>
-          <span v-if="auth.isAdmin" class="muted">#{{ post.id }}</span>
-        </div>
+    <template v-if="channel === 'square'">
+      <div class="banner-wrap">
+        <el-carousel height="160px" indicator-position="outside">
+          <el-carousel-item v-for="(b, i) in banners" :key="i">
+            <div class="banner-slide" :style="{ background: b.color }">
+              <strong>{{ b.title }}</strong>
+              <span>{{ b.subtitle }}</span>
+            </div>
+          </el-carousel-item>
+        </el-carousel>
       </div>
-    </el-skeleton>
 
-    <div style="margin-top: 16px; display: flex; justify-content: flex-end">
-      <el-pagination
-        background
-        layout="prev, pager, next"
-        :page-size="query.page_size"
-        :current-page="query.page"
-        :total="query.total"
-        @current-change="(p: number) => { query.page = p; load() }"
-      />
+      <div class="sort-bar">
+        <span class="muted">
+          排序方式
+          <span v-if="postsStore.refreshing" class="refresh-hint">· 更新中</span>
+        </span>
+        <el-radio-group
+          v-model="postsStore.sort"
+          size="small"
+          @change="() => { postsStore.page = 1; load(true) }"
+        >
+          <el-radio-button label="latest">最新</el-radio-button>
+          <el-radio-button label="hot">热门</el-radio-button>
+        </el-radio-group>
+      </div>
+
+      <el-skeleton :loading="postsStore.loading" animated :rows="6">
+        <div v-if="!postsStore.posts.length" class="empty-state">暂无帖子，去发布第一条吧。</div>
+        <PostItemCard
+          v-for="post in postsStore.posts"
+          :key="post.id"
+          :post="post"
+          :liked="!!postsStore.likedMap[post.id]"
+          @open="openPost(post)"
+          @like="toggleLike(post)"
+        />
+      </el-skeleton>
+
+      <div class="pager">
+        <el-pagination
+          background
+          layout="prev, pager, next"
+          :page-size="postsStore.pageSize"
+          :current-page="postsStore.page"
+          :total="postsStore.total"
+          @current-change="(p: number) => { postsStore.page = p; load(true) }"
+        />
+      </div>
+    </template>
+
+    <div v-else class="empty-state">
+      {{ channel === 'college' ? '学院频道即将上线' : '后院频道即将上线' }}
     </div>
   </div>
 </template>
+
+<style scoped>
+.banner-wrap {
+  background: #fff;
+  margin-bottom: 6px;
+}
+
+.banner-slide {
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.banner-slide strong {
+  font-size: 22px;
+}
+
+.sort-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #fff;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.refresh-hint {
+  color: var(--el-color-primary);
+  font-size: 12px;
+}
+
+.pager {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+}
+</style>
