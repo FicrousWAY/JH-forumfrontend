@@ -84,6 +84,16 @@ export const usePostsStore = defineStore(
       fetchedAt.value = 0
     }
 
+    /** 写操作后立刻从列表缓存移除，避免 SWR 短暂展示已删除内容 */
+    function removePost(postId: number) {
+      posts.value = posts.value.filter((p) => p.id !== postId)
+      const nextLiked = { ...likedMap.value }
+      delete nextLiked[postId]
+      likedMap.value = nextLiked
+      if (total.value > 0) total.value -= 1
+      fetchedAt.value = 0
+    }
+
     return {
       posts,
       likedMap,
@@ -97,6 +107,7 @@ export const usePostsStore = defineStore(
       fetchList,
       updateLike,
       invalidate,
+      removePost,
     }
   },
   {

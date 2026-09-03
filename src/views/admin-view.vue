@@ -3,6 +3,9 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { postApi } from '@/api'
 import type { PostItem } from '@/types'
+import { usePostsStore } from '@/stores/posts'
+
+const postsStore = usePostsStore()
 
 const loading = ref(false)
 const posts = ref<PostItem[]>([])
@@ -27,6 +30,7 @@ async function remove(post: PostItem) {
   try {
     await ElMessageBox.confirm(`确认删除帖子 #${post.id}？`, '管理删除', { type: 'warning' })
     await postApi.adminDelete(post.id)
+    postsStore.removePost(post.id)
     ElMessage.success('删除成功')
     await load()
   } catch {

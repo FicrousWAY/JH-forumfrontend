@@ -50,6 +50,7 @@ npm run build
 
 - 登录成功后调用 `invalidate()` 并预取列表，缩短进入首页的等待时间。
 - 发布新帖成功后调用 `invalidate()`，下次进入列表页会重新拉取。
+- 管理员删除帖子后调用 `removePost()`：立刻从本地列表移除该帖，并失效 TTL，返回发现页时会重新拉取，避免已删除内容残留。
 
 **使用位置：** `src/views/post-list-view.vue`
 

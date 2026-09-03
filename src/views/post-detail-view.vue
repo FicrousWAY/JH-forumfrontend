@@ -5,11 +5,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { postApi } from '@/api'
 import type { PostDetail } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { usePostsStore } from '@/stores/posts'
 import PostReplyCard from '@/components/post-reply-card.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const postsStore = usePostsStore()
 const loading = ref(false)
 const detail = ref<PostDetail | null>(null)
 const liked = ref(false)
@@ -80,6 +82,7 @@ async function removePost() {
       type: 'warning',
     })
     await postApi.adminDelete(postId.value)
+    postsStore.removePost(postId.value)
     ElMessage.success('已删除')
     router.push({ name: 'home' })
   } catch {
