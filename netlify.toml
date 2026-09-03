@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# 将 /api 代理到后端，与 vite.config.ts 中 dev proxy 行为一致
+[[redirects]]
+  from = "/api/*"
+  to = "http://118.196.72.238:8081/api/:splat"
+  status = 200
+  force = true
+
+# Vue Router history 模式：非静态资源回退到 index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
