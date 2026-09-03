@@ -1,5 +1,5 @@
 # 精弘论坛前端
-
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9460f4c0-d217-4603-a3a6-e139c29a7512/deploy-status)](https://app.netlify.com/projects/jhforumfrontend/deploys)
 Vue 3 + Vite + TypeScript + Pinia + Element Plus。
 
 ## 开发
