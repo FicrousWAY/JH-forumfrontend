@@ -10,6 +10,7 @@ import './styles/main.css'
 
 const app = createApp(App)
 const pinia = createPinia()
+// 启用持久化：auth / posts / agent 写入 localStorage，刷新后可恢复登录与列表缓存。
 pinia.use(piniaPluginPersistedstate)
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

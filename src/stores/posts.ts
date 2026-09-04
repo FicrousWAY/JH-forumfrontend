@@ -3,9 +3,22 @@ import { ref } from 'vue'
 import { postApi } from '@/api'
 import type { PostItem } from '@/types'
 
-/** 缓存有效期：过期后在后台静默刷新 */
+/** 帖子列表缓存 TTL：过期后采用 SWR，先展示本地数据再后台静默刷新。 */
 const CACHE_TTL_MS = 60_000
 
+/**
+ * 帖子列表 Pinia store：内存态 + localStorage 持久化 + Stale-While-Revalidate。
+ *
+ * 读取策略（fetchList）：
+ * - 无缓存：loading=true，等待接口（列表页显示骨架屏）
+ * - 有缓存且未过期：直接返回，不发请求
+ * - 有缓存但已过期：先展示缓存，refreshing=true 后台刷新
+ * - 切换分页/排序或 force：强制重新请求
+ *
+ * 失效：
+ * - invalidate() 只清 TTL，下次进入列表会重拉
+ * - removePost() 立刻从列表移除并失效，避免已删帖短暂残留
+ */
 export const usePostsStore = defineStore(
   'posts',
   () => {
@@ -84,7 +97,7 @@ export const usePostsStore = defineStore(
       fetchedAt.value = 0
     }
 
-    /** 写操作后立刻从列表缓存移除，避免 SWR 短暂展示已删除内容 */
+    /** 写操作后立刻从列表缓存移除，避免 SWR 短暂展示已删除内容。 */
     function removePost(postId: number) {
       posts.value = posts.value.filter((p) => p.id !== postId)
       const nextLiked = { ...likedMap.value }

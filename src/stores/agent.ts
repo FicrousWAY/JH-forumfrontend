@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth'
 export interface AgentMessage {
   role: 'user' | 'assistant'
   content: string
+  pending?: PendingAction | null
+  draftStatus?: 'pending' | 'confirmed' | 'failed'
 }
 
 interface AgentSession {
@@ -27,6 +29,11 @@ function createSession(username: string): AgentSession {
   }
 }
 
+/**
+ * Agent 对话缓存：按用户名隔离 sessions，persist 只持久化 sessions 到 localStorage。
+ * 刷新或关闭浏览器后，同一账号可恢复 sessionId、消息记录和待确认草稿。
+ * 「清空对话」调用 resetSession，会新建 sessionId。
+ */
 export const useAgentStore = defineStore(
   'agent',
   () => {
@@ -55,6 +62,16 @@ export const useAgentStore = defineStore(
       current.value.messages.push(message)
     }
 
+    function bindPendingToLastReply() {
+      const pendingAction = current.value.pending
+      if (!pendingAction) return
+      const last = [...current.value.messages].reverse().find((m) => m.role === 'assistant')
+      if (last && !last.pending) {
+        last.pending = pendingAction
+        last.draftStatus = 'pending'
+      }
+    }
+
     function resetSession() {
       sessions.value[username.value] = createSession(username.value)
     }
@@ -65,12 +82,13 @@ export const useAgentStore = defineStore(
       messages,
       pending,
       pushMessage,
+      bindPendingToLastReply,
       resetSession,
     }
   },
   {
     persist: {
-      pick: ['sessions'],
+      pick: ['sessions'], // 按用户名隔离的会话映射，刷新后可恢复对话
     },
   },
 )

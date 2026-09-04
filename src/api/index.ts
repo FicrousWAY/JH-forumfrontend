@@ -22,8 +22,8 @@ export const postApi = {
   list(params: { page?: number; page_size?: number; sort?: string }) {
     return http.get<ApiResponse<{ items: PostItem[]; meta: PageMeta }>>('/posts', { params })
   },
-  create(content: string) {
-    return http.post<ApiResponse<PostItem>>('/posts', { content })
+  create(data: { title: string; body: string }) {
+    return http.post<ApiResponse<PostItem>>('/posts', data)
   },
   detail(postId: number) {
     return http.get<ApiResponse<PostDetail>>(`/posts/${postId}`)
@@ -38,6 +38,12 @@ export const postApi = {
   },
   comment(postId: number, content: string) {
     return http.post(`/posts/${postId}/comment`, { content })
+  },
+  remove(postId: number) {
+    return http.request<ApiResponse<null>>({
+      method: 'DELETE',
+      url: `/posts/${postId}`,
+    })
   },
   adminDelete(postId: number) {
     return http.delete(`/admin/posts/${postId}`)

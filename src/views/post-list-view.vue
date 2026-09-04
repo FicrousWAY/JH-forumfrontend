@@ -18,7 +18,7 @@ const banners = [
 ]
 
 async function load(force = false) {
-  await postsStore.fetchList({ force })
+  await postsStore.fetchList({ force }) // 默认 SWR：TTL 内用缓存，过期后台刷新；force 则强制请求
 }
 
 async function toggleLike(post: PostItem) {

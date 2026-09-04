@@ -35,7 +35,7 @@ async function submitLogin() {
     const { data } = await authApi.login(loginForm)
     auth.setAuth(data.data.access_token, data.data.user)
     postsStore.invalidate()
-    void postsStore.fetchList({ force: true })
+    void postsStore.fetchList({ force: true }) // 登录后预热列表缓存，缩短进入首页等待
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/'
     router.replace(redirect)
@@ -70,7 +70,6 @@ async function submitRegister() {
   <div class="auth-page">
     <div class="auth-card">
       <h1 class="auth-title">精弘论坛</h1>
-      <p class="muted">学生端 / 管理端统一入口</p>
 
       <el-tabs v-model="mode">
         <el-tab-pane label="登录" name="login">

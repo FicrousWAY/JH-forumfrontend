@@ -5,7 +5,7 @@ import router from '@/router'
 import type { ApiResponse } from '@/types'
 
 const http = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api/v1', // 相对路径，本地走 Vite 代理，生产走 Netlify / Nginx 反代
   timeout: 20000,
 })
 
@@ -31,7 +31,7 @@ http.interceptors.response.use(
     const msg = error?.response?.data?.msg || error.message || '网络异常'
     if (status === 401) {
       const auth = useAuthStore()
-      auth.logout()
+      auth.logout() // JWT 失效：清空本地登录态并跳转登录
       ElMessage.warning('登录已失效，请重新登录')
       router.push({ name: 'login' })
     } else if (status === 403) {

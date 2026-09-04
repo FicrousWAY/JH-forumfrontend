@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PostItem } from '@/types'
+import { postBodyOf, postTitleOf } from '@/types'
 
 const props = defineProps<{
   post: PostItem
@@ -12,17 +13,9 @@ const emit = defineEmits<{
   like: []
 }>()
 
-const title = computed(() => {
-  const lines = props.post.content.trim().split(/\r?\n/)
-  return lines[0]?.slice(0, 40) || '无标题'
-})
+const title = computed(() => postTitleOf(props.post))
 
-const excerpt = computed(() => {
-  const text = props.post.content.trim()
-  const firstLine = text.split(/\r?\n/)[0] || ''
-  const rest = text.slice(firstLine.length).trim()
-  return rest || text
-})
+const excerpt = computed(() => postBodyOf(props.post))
 
 const tagLabel = computed(() => {
   const role = props.post.author.role

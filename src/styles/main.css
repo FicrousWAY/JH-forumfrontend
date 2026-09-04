@@ -41,12 +41,14 @@ textarea {
   font: inherit;
 }
 
+/* PC：左侧栏 + 主内容；宽度由 --sidebar-width 控制，可在布局里拖拽。 */
 .app-shell {
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar-width, 220px) 1fr;
   background: var(--bg);
 }
+
 
 .app-shell.collapsed {
   --sidebar-width: 72px;
@@ -228,7 +230,7 @@ textarea {
 }
 
 .app-tab-bar {
-  display: none;
+  display: none; /* PC 隐藏，max-width 860px 时改为 flex */
   position: fixed;
   left: 0;
   right: 0;
@@ -259,7 +261,7 @@ textarea {
   line-height: 1;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 860px) { /* 隐藏侧栏、显示底部 Tab、主区留出底栏高度 */
   .app-shell,
   .app-shell.collapsed {
     grid-template-columns: 1fr;

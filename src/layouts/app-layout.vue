@@ -9,7 +9,7 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const sidebarWidth = ref(220)
+const sidebarWidth = ref(220) // PC 侧栏可拖拽；≤860px 时侧栏由 CSS 隐藏
 const dragging = ref(false)
 
 const collapsed = computed(() => sidebarWidth.value < 120)

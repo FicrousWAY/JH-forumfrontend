@@ -29,6 +29,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
+  // 守卫读取 Pinia 中的 JWT：未登录跳登录页，admin 页需管理员，已登录访问 /login 则回首页。
   if (!to.meta.public && !auth.isLogin) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

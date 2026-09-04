@@ -44,16 +44,16 @@ onMounted(load)
 <template>
   <div class="panel">
     <h2 style="margin-top: 0; font-size: 18px">管理端 · 帖子治理</h2>
-    <p class="muted" style="font-size: 13px">仅管理员可删除任意帖子。学生账号访问会被路由拦截。</p>
 
     <el-table :data="posts" v-loading="loading" style="width: 100%">
       <el-table-column prop="id" label="ID" width="90" />
-      <el-table-column prop="content" label="内容" min-width="240" show-overflow-tooltip />
+      <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
+      <el-table-column prop="body" label="正文" min-width="240" show-overflow-tooltip />
       <el-table-column label="作者" width="140">
         <template #default="{ row }">{{ row.author.name }}</template>
       </el-table-column>
-      <el-table-column prop="like_count" label="赞" width="80" />
-      <el-table-column prop="comment_count" label="评" width="80" />
+      <el-table-column prop="like_count" label="点赞数" width="80" />
+      <el-table-column prop="comment_count" label="评论数" width="80" />
       <el-table-column label="操作" width="120">
         <template #default="{ row }">
           <el-button type="danger" link @click="remove(row)">删除</el-button>

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { postApi } from '@/api'
 import type { PostDetail } from '@/types'
+import { postBodyOf, postTitleOf } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { usePostsStore } from '@/stores/posts'
 import PostReplyCard from '@/components/post-reply-card.vue'
@@ -19,21 +20,15 @@ const comment = ref('')
 
 const postId = computed(() => Number(route.params.id))
 
-const title = computed(() => {
-  if (!detail.value) return ''
-  const lines = detail.value.content.trim().split(/\r?\n/)
-  return lines[0]?.slice(0, 60) || '无标题'
-})
+const title = computed(() => (detail.value ? postTitleOf(detail.value) : ''))
 
-const body = computed(() => {
-  if (!detail.value) return ''
-  const text = detail.value.content.trim()
-  const lines = text.split(/\r?\n/)
-  if (lines.length <= 1) return text
-  return lines.slice(1).join('\n').trim() || text
-})
+const body = computed(() => (detail.value ? postBodyOf(detail.value) : ''))
 
 const avatarChar = computed(() => (detail.value?.author.name || '?').charAt(0))
+const canDelete = computed(() => {
+  if (!detail.value) return false
+  return auth.isAdmin || Number(auth.user?.id) === Number(detail.value.author.id)
+})
 
 async function load() {
   if (!Number.isFinite(postId.value) || postId.value < 1) {
@@ -77,16 +72,22 @@ async function submitComment() {
 }
 
 async function removePost() {
+  if (!detail.value) return
+  const isOwner = Number(auth.user?.id) === Number(detail.value.author.id)
   try {
-    await ElMessageBox.confirm('确认删除该帖子及其评论吗？此操作不可恢复。', '管理删除', {
+    await ElMessageBox.confirm('确认删除该帖子及其评论吗？此操作不可恢复。', isOwner ? '删除帖子' : '管理删除', {
       type: 'warning',
     })
-    await postApi.adminDelete(postId.value)
+    if (isOwner) {
+      await postApi.remove(postId.value)
+    } else {
+      await postApi.adminDelete(postId.value)
+    }
     postsStore.removePost(postId.value)
     ElMessage.success('已删除')
     router.push({ name: 'home' })
-  } catch {
-    // cancel
+  } catch (err) {
+    if (err === 'cancel' || err === 'close') return
   }
 }
 
@@ -97,7 +98,7 @@ onMounted(load)
   <div class="jh-post" v-loading="loading">
     <div class="back-row">
       <el-button text @click="router.push({ name: 'home' })">← 返回</el-button>
-      <el-button v-if="auth.isAdmin && detail" type="danger" size="small" @click="removePost">
+      <el-button v-if="canDelete" type="danger" size="small" @click="removePost">
         删除
       </el-button>
     </div>
